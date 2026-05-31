@@ -144,8 +144,11 @@ public sealed class SessionStateObserver : ISessionStateObserver
         }
         else if (!itemChanged && previousProgressObservedUtc.HasValue && previousPaused != true && snapshot.IsPaused != true)
         {
+            // Use wall-clock elapsed time directly. Native clients (e.g. mobile apps) may not
+            // update LastPlaybackCheckIn reliably, so gating on HasAdvanced causes ticks to
+            // never accumulate and thresholds to never fire for those clients.
             var elapsedTicks = Math.Max(0, (nowUtc - previousProgressObservedUtc.Value).Ticks);
-            if (elapsedTicks > 0 && HasAdvanced(state.LastObservedLastPlaybackCheckInUtc, snapshot.LastPlaybackCheckInUtc))
+            if (elapsedTicks > 0)
             {
                 AddPlaybackTicks(state, elapsedTicks);
             }

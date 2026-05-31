@@ -10,6 +10,42 @@ public sealed class ServerFallbackEnforcementServiceInferenceTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-02-26T18:00:00Z");
 
     [Fact]
+    public void NoPositionTicks_WithUnchangedCheckIn_AccumulatesWallClockElapsedTicks()
+    {
+        // Regression: native clients (e.g. Moonfin) may not update LastPlaybackCheckIn
+        // reliably. Ticks must still accumulate from wall-clock elapsed time so that the
+        // timer threshold eventually fires.
+        var state = new SessionState
+        {
+            SessionId = "s1",
+            CurrentItemId = "item1",
+            LastObservedPositionTicks = null,
+            LastPlaybackProgressObservedUtc = Now.AddSeconds(-30),
+            LastObservedLastPlaybackCheckInUtc = Now.AddMinutes(-10),
+            LastInferredActivityUtc = Now.AddMinutes(-60),
+            IsPaused = false
+        };
+        var snapshot = new ServerObservedSessionSnapshot
+        {
+            SessionId = "s1",
+            ItemId = "item1",
+            PositionTicks = null,
+            IsPaused = false,
+            LastPlaybackCheckInUtc = Now.AddMinutes(-10)
+        };
+
+        var before = state.ServerFallbackPlaybackTicksSinceReset;
+        InvokeObserveSession(state, snapshot, Now);
+
+        Assert.True(
+            state.ServerFallbackPlaybackTicksSinceReset > before,
+            "Ticks must accumulate from wall-clock elapsed time even when LastPlaybackCheckIn has not advanced.");
+        Assert.True(
+            TimeSpan.FromTicks(state.ServerFallbackPlaybackTicksSinceReset).TotalSeconds >= 29,
+            "Accumulated ticks should approximate the 30s elapsed window.");
+    }
+
+    [Fact]
     public void PassiveHeartbeatObservation_DoesNotAdvanceInferredActivity()
     {
         var state = new SessionState
