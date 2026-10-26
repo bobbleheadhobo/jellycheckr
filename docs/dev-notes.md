@@ -67,6 +67,7 @@ Smoke checks include:
   - publishes `Sessions/Playing` + `Sessions/Playing/Progress` updates and verifies the log trigger reason `developer_mode_after_15s`
 - Web UI injection registration check:
   - verifies `Registered Jellyfin Web index.html transformation for web client injection` is present in logs for `12.x`
+  - verifies `/web/index.html` is served with the `jellycheckr-web-loader` script injected
   - records `skipped_unsupported_jellyfin_version` for any version without a pinned File Transformation package
 - Plugin lifecycle regression check:
   - fetches `/Plugins`
@@ -76,6 +77,9 @@ Smoke checks include:
 Artifacts:
 - Written under `tools/harness/artifacts/`
 - Includes smoke summary, API response payloads, and docker compose logs per run
+
+Browser checks (`tools/harness/browser/README.md`) drive real Jellyfin Web against a harness container to cover the
+web prompt, the dashboard config page, and real remote pause/stop commands, which the HTTP smoke run cannot.
 
 ### Version/Framework Mapping
 

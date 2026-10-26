@@ -1,6 +1,16 @@
 # Project Specifics 
 This project is not live and is in active development. We do not need to concern ourselves with backwards compatibility right now, However we should play close attention not to break existing working functionality.
 
+Before changing code, read `docs/ai-agent-guide.md`: repository map, build/test/harness commands, the Jellyfin 12.x
+compatibility contract, the Jellyfin integration points that break on upgrades (auth headers, user id format,
+reflection-based session reads, remote commands, web injection), and how to verify changes against a real Jellyfin
+(`tools/harness`, `tools/harness/browser`). `docs/jellyfin-12-upgrade.md` lists known open issues.
+
+Key rules that are easy to get wrong:
+- Target Jellyfin `12.x` on `net10.0`; keep `JellyfinPackageVersion` at the lowest 12.x the code needs (it sets `targetAbi`).
+- Never send `X-Emby-Token` / `X-Emby-Authorization` / `api_key`; Jellyfin 12 rejects them. Use `Authorization: MediaBrowser Token="..."`.
+- Compare Jellyfin user ids as `D`-format GUID strings.
+
 # .NET Development Rules
 
 You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and Entity Framework Core.

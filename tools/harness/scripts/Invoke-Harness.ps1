@@ -813,6 +813,16 @@ function Invoke-WebUiInjectionCheck {
         throw "Web UI injection did not register on Jellyfin $($Context.Version). Details: $details"
     }
 
+    # Registration alone does not prove File Transformation rewrites the page on this Jellyfin build.
+    $indexHtmlInjected = $null
+    if ($requiresFileTransformation) {
+        $indexResponse = Invoke-WebRequestAllowError -Uri "$($Context.BaseUrl)/web/index.html" -TimeoutSeconds 15
+        $indexHtmlInjected = $indexResponse.StatusCode -eq 200 -and ([string]$indexResponse.Content).Contains('id="jellycheckr-web-loader"')
+        if (-not $indexHtmlInjected) {
+            throw "Web UI injection registered on Jellyfin $($Context.Version), but /web/index.html (HTTP $($indexResponse.StatusCode)) did not contain the Jellycheckr loader script."
+        }
+    }
+
     $status = if (-not [string]::IsNullOrWhiteSpace([string]$registeredLine)) {
         "registered"
     }
@@ -826,6 +836,7 @@ function Invoke-WebUiInjectionCheck {
     $result = [ordered]@{
         expected = $requiresFileTransformation
         status = $status
+        indexHtmlInjected = $indexHtmlInjected
         registeredLogLine = [string]$registeredLine
         notDetectedLogLine = [string]$notDetectedLine
         failureLogLine = [string]$registrationFailureLine

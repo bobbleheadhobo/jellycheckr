@@ -13,6 +13,9 @@ public interface IAuthenticatedUserIdResolver
 
 public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
 {
+    // Jellyfin's authentication handler stores the user id under this claim (InternalClaimTypes.UserId).
+    private const string JellyfinUserIdClaimType = "Jellyfin-UserId";
+
     private static readonly string[] UserIdClaimTypes =
     {
         ClaimTypes.NameIdentifier,
@@ -39,6 +42,14 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         }
 
         var principal = httpContext.User;
+
+        // The claim holds an "N"-formatted GUID; session snapshots use the "D" format, so normalize it.
+        // API keys authenticate without a user and carry Guid.Empty.
+        if (Guid.TryParse(principal.FindFirstValue(JellyfinUserIdClaimType), out var jellyfinUserId))
+        {
+            return FormatUserId(jellyfinUserId);
+        }
+
         foreach (var claimType in UserIdClaimTypes)
         {
             var claimValue = principal.FindFirstValue(claimType);
@@ -51,10 +62,9 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         try
         {
             var authorizationInfo = _authService.Authenticate(httpContext.Request).GetAwaiter().GetResult();
-            var userId = authorizationInfo?.UserId.ToString();
-            if (!string.IsNullOrWhiteSpace(userId))
+            if (authorizationInfo is not null)
             {
-                return userId;
+                return FormatUserId(authorizationInfo.UserId);
             }
         }
         catch (Exception ex)
@@ -63,5 +73,10 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         }
 
         return null;
+    }
+
+    private static string? FormatUserId(Guid userId)
+    {
+        return userId == Guid.Empty ? null : userId.ToString("D");
     }
 }
