@@ -15,5 +15,5 @@ Jellycheckr server plugin for Jellyfin.
 From repo root:
 
 - `dotnet build apps/server-plugin/src/Jellycheckr.Server/Jellycheckr.Server.csproj`
-- `dotnet publish apps/server-plugin/src/Jellycheckr.Server/Jellycheckr.Server.csproj -c Release -f net8.0`
+- `dotnet publish apps/server-plugin/src/Jellycheckr.Server/Jellycheckr.Server.csproj -c Release -f net10.0`
 - Zip artifact is written to `apps/server-plugin/artifacts/`

@@ -70,7 +70,7 @@ Jellycheckr uses shared trigger settings for both the web prompt and server fall
 4. Open the plugin configuration page from the dashboard to adjust the behavior.
 
 > [!IMPORTANT]
-> If you want the interactive popup inside Jellyfin Web, install the Jellyfin File Transformation plugin as well.
+> If you want the interactive popup inside Jellyfin Web, install the Jellyfin File Transformation plugin as well (version `3.x` or newer on Jellyfin 12).
 > Without it, the injected Jellyfin Web modal will not appear.
 > Jellycheckr can still operate in fallback-only mode for native clients when server fallback is enabled.
 
@@ -139,7 +139,8 @@ For normal use, leave developer mode off.
 
 ## Compatibility And Limitations
 
-- Jellycheckr currently targets Jellyfin `10.9.x`.
+- Jellycheckr currently targets Jellyfin `12.x` (12.0 and newer, .NET 10).
+- Jellyfin 12 does not load plugins built for `10.x`, and this build does not load on `10.x`. Servers still on `10.x` should stay on the previous Jellycheckr release.
 - The interactive Jellyfin Web prompt depends on the Jellyfin File Transformation plugin being installed and available.
 - Native clients do not show the Jellycheckr modal. They rely on server fallback behavior instead.
 - Client messaging before pause is best-effort and may not behave the same across all clients.
@@ -149,7 +150,7 @@ For normal use, leave developer mode off.
 
 ### I Installed It But Do Not See The Popup In Jellyfin Web
 
-- Make sure the Jellyfin File Transformation plugin is installed.
+- Make sure the Jellyfin File Transformation plugin is installed, and that its version supports your Jellyfin release (`3.x` for Jellyfin 12).
 - Confirm Jellycheckr is enabled in its configuration page.
 - If needed, verify these plugin-served assets load successfully:
   - `/Plugins/Aysw/web/jellycheckr-web.js`

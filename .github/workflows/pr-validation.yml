@@ -27,8 +27,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
-            9.0.x
+            10.0.x
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -88,7 +87,7 @@ jobs:
           dotnet publish
           apps/server-plugin/src/Jellycheckr.Server/Jellycheckr.Server.csproj
           -c Release
-          -f net8.0
+          -f net10.0
           -o "${{ runner.temp }}/pr-validation-publish"
           /p:JellycheckrCreatePluginZip=false
           /p:Version=0.0.0-ci

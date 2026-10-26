@@ -7,6 +7,7 @@
       dockerfile: tools/harness/docker/Dockerfile
       args:
         JELLYFIN_VERSION: ${JELLYFIN_VERSION}
+        JELLYFIN_PACKAGE_VERSION: ${JELLYFIN_PACKAGE_VERSION}
         DOTNET_TARGET_FRAMEWORK: ${DOTNET_TARGET_FRAMEWORK}
         HARNESS_SERVER_ID: ${HARNESS_SERVER_ID}
     ports:

@@ -124,7 +124,9 @@ function buildAuthHeaders(): Record<string, string> {
   const apiClient = (window as unknown as { ApiClient?: { accessToken?: () => string } }).ApiClient;
   const token = apiClient?.accessToken?.();
   if (token) {
-    return { "X-Emby-Token": token };
+    // Jellyfin 12 disables the legacy X-Emby-Token header by default; the MediaBrowser
+    // Authorization scheme is the supported form and also works on older servers.
+    return { Authorization: `MediaBrowser Token="${token}"` };
   }
 
   return {};

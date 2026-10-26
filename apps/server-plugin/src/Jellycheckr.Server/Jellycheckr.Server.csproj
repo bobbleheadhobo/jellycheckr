@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Jellycheckr.Server</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version Condition="'$(Version)' == ''">0.1.0</Version>
-    <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == ''">10.9.11</JellyfinPackageVersion>
+    <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == ''">12.0.0</JellyfinPackageVersion>
     <JellycheckrPluginGuid>a53af988-9d8f-4a7c-8d5f-f902fd90e4bd</JellycheckrPluginGuid>
     <JellycheckrVersionCore4>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^\d+\.\d+\.\d+\.\d+').Value)</JellycheckrVersionCore4>
     <JellycheckrVersionCore3>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^\d+\.\d+\.\d+').Value)</JellycheckrVersionCore3>
@@ -67,9 +67,6 @@
     <PackageReference Include="Jellyfin.Model" Version="$(JellyfinPackageVersion)">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="System.Text.Json" Version="8.0.6" Condition="'$(TargetFramework)' == 'net8.0'" />
-    <PackageReference Include="System.Text.Json" Version="9.0.11" Condition="'$(TargetFramework)' == 'net9.0'" />
-    <PackageReference Include="System.Text.Encodings.Web" Version="4.5.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -266,7 +263,7 @@
     Name="JellycheckrPackagePluginZip"
     AfterTargets="Publish"
     DependsOnTargets="JellycheckrWritePluginMetaJson;JellycheckrCopyWebAssetsToPublishOutput"
-    Condition="'$(TargetFramework)' == 'net8.0' and '$(JellycheckrCreatePluginZip)' == 'true'">
+    Condition="'$(TargetFramework)' == 'net10.0' and '$(JellycheckrCreatePluginZip)' == 'true'">
     <PropertyGroup>
       <JellycheckrNormalizedArtifactsDir>$([MSBuild]::EnsureTrailingSlash('$(JellycheckrArtifactsDir)'))</JellycheckrNormalizedArtifactsDir>
       <JellycheckrPluginZipPath>$(JellycheckrNormalizedArtifactsDir)$(JellycheckrPackageArtifactNameStem)_$(Version).zip</JellycheckrPluginZipPath>
