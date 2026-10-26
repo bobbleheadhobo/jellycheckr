@@ -141,6 +141,13 @@ public sealed class ServerFallbackEnforcementService : BackgroundService
             }
 
             var decision = _decisionEngine.Evaluate(state, config, nowUtc);
+
+            // Re-checked every tick, so enforcement resumes as soon as the client reconnects.
+            if (decision.ShouldTrigger && !config.ServerFallbackDryRun && !_commandDispatcher.CanReceiveCommands(state.SessionId))
+            {
+                decision = decision with { ShouldTrigger = false, Reason = "no_remote_control" };
+            }
+
             _logger.LogJellycheckrTrace(
                 "Fallback decision session={SessionId} trigger={Trigger} reason={Reason} minutes={Minutes:F2} transitions={Transitions} inactivityMinutes={Inactivity:F2}",
                 state.SessionId,
@@ -180,12 +187,13 @@ public sealed class ServerFallbackEnforcementService : BackgroundService
             state.LastFallbackAction = "dry_run";
             state.LastFallbackActionResult = decision.Reason;
             _logger.LogJellycheckrInformation(
-                "[Jellycheckr] Fallback action decision session={SessionId} action=dry_run reason={Reason} playbackMinutes={PlaybackMinutes:F2} episodeTransitions={EpisodeTransitions} inactivityMinutes={InactivityMinutes:F2}.",
+                "[Jellycheckr] Fallback action decision session={SessionId} action=dry_run reason={Reason} playbackMinutes={PlaybackMinutes:F2} episodeTransitions={EpisodeTransitions} inactivityMinutes={InactivityMinutes:F2} remoteControl={RemoteControl}.",
                 state.SessionId,
                 decision.Reason,
                 decision.PlaybackMinutesSinceReset,
                 decision.EpisodeTransitionsSinceReset,
-                decision.InactivityMinutes);
+                decision.InactivityMinutes,
+                _commandDispatcher.CanReceiveCommands(state.SessionId));
             ApplyFallbackResetAndCooldown(state, nowUtc, config.CooldownMinutes);
             return;
         }

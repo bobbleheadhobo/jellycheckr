@@ -8,7 +8,7 @@ namespace Jellycheckr.Server.Services;
 
 public interface IAuthenticatedUserIdResolver
 {
-    string? Resolve(HttpContext? httpContext);
+    ValueTask<string?> ResolveAsync(HttpContext? httpContext);
 }
 
 public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
@@ -34,7 +34,7 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         _logger = logger;
     }
 
-    public string? Resolve(HttpContext? httpContext)
+    public async ValueTask<string?> ResolveAsync(HttpContext? httpContext)
     {
         if (httpContext is null)
         {
@@ -59,9 +59,10 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
             }
         }
 
+        // Jellyfin's authentication handler sets the claim above on every authenticated request; this only runs if that changes.
         try
         {
-            var authorizationInfo = _authService.Authenticate(httpContext.Request).GetAwaiter().GetResult();
+            var authorizationInfo = await _authService.Authenticate(httpContext.Request).ConfigureAwait(false);
             if (authorizationInfo is not null)
             {
                 return FormatUserId(authorizationInfo.UserId);

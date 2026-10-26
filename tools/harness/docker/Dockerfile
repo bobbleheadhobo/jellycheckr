@@ -5,7 +5,7 @@ ARG DOTNET_TARGET_FRAMEWORK=net10.0
 ARG FILE_TRANSFORMATION_VERSION=3.0.2.0
 ARG HARNESS_SERVER_ID=9f1d4f3cecb043f9b651c6b35acbbd7d
 
-FROM node:20-bookworm-slim AS node-runtime
+FROM node:24-bookworm-slim AS node-runtime
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS plugin-build
 ARG JELLYFIN_PACKAGE_VERSION

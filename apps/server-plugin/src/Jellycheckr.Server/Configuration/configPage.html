@@ -11,7 +11,6 @@
                 <iframe
                     id="jellycheckrConfigFrame"
                     title="Jellycheckr configuration"
-                    src="/Plugins/Aysw/web/jellycheckr-config-ui-host.html"
                     style="display:block; width:100%; min-height:72vh; height:72vh; border:0; background:transparent; border-radius:12px;"
                     loading="eager">
                 </iframe>
@@ -29,6 +28,24 @@
             if (!frame) {
                 return;
             }
+
+            // ApiClient.getUrl includes the server base URL (for example /jellyfin); Jellyfin redirects
+            // un-prefixed paths to the web app, so the absolute path only works without a base URL.
+            function resolveHostPageUrl() {
+                var hostPagePath = 'Plugins/Aysw/web/jellycheckr-config-ui-host.html';
+                var apiClient = window.ApiClient;
+                if (apiClient && typeof apiClient.getUrl === 'function') {
+                    try {
+                        return apiClient.getUrl(hostPagePath);
+                    } catch (ex) {
+                        // Fall back to the absolute path.
+                    }
+                }
+
+                return '/' + hostPagePath;
+            }
+
+            frame.src = resolveHostPageUrl();
 
             function syncMinimumHeight() {
                 var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;

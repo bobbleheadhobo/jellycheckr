@@ -12,33 +12,33 @@ namespace Jellycheckr.Server.Tests;
 public sealed class AyswControllerTests
 {
     [Fact]
-    public void Ack_ReturnsForbidden_WhenSessionOwnershipFails()
+    public async Task Ack_ReturnsForbidden_WhenSessionOwnershipFails()
     {
         var controller = CreateController(allowMutations: false);
 
-        var result = controller.Ack("s1", new AckRequest { AckType = "continue" });
+        var result = await controller.Ack("s1", new AckRequest { AckType = "continue" });
 
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
-    public void Interaction_ReturnsForbidden_WhenSessionOwnershipFails()
+    public async Task Interaction_ReturnsForbidden_WhenSessionOwnershipFails()
     {
         var controller = CreateController(allowMutations: false);
 
-        var result = controller.Interaction("s1", new InteractionRequest { EventType = "keydown" });
+        var result = await controller.Interaction("s1", new InteractionRequest { EventType = "keydown" });
 
         var objectResult = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
-    public void PromptShown_ReturnsForbidden_WhenSessionOwnershipFails()
+    public async Task PromptShown_ReturnsForbidden_WhenSessionOwnershipFails()
     {
         var controller = CreateController(allowMutations: false);
 
-        var result = controller.PromptShown("s1", new PromptShownRequest { TimeoutSeconds = 30 });
+        var result = await controller.PromptShown("s1", new PromptShownRequest { TimeoutSeconds = 30 });
 
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
@@ -97,9 +97,9 @@ public sealed class AyswControllerTests
             _userId = userId;
         }
 
-        public string? Resolve(HttpContext? httpContext)
+        public ValueTask<string?> ResolveAsync(HttpContext? httpContext)
         {
-            return _userId;
+            return ValueTask.FromResult(_userId);
         }
     }
 }

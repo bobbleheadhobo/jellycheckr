@@ -54,6 +54,26 @@ File Transformation has no 12.3-specific build yet; its `Release-12.2.0` build l
 5. **Harness injection check only read a log line.** It now also asserts the served `/web/index.html` contains the
    loader, which catches a File Transformation build that registers but does not apply on a newer Jellyfin.
 
+Fixed in the follow-up pass (verified on 12.3 with the smoke run and browser checks):
+
+6. **Config page broke under a Jellyfin base URL.** `configPage.html` pointed the iframe at the absolute path
+   `/Plugins/Aysw/web/jellycheckr-config-ui-host.html`; with `BaseUrl=/jellyfin`, Jellyfin's
+   `BaseUrlRedirectionMiddleware` redirects that path to `/jellyfin/web/`, so the iframe showed Jellyfin. The page
+   script now sets the iframe `src` from `ApiClient.getUrl(...)` (absolute path only if `ApiClient` is missing).
+   Verified: config load + save under `/jellyfin` via `ApiClient.ajax` and the `fetch()` fallback.
+7. **Synchronous auth fallback.** `AuthenticatedUserIdResolver.Resolve` blocked on `IAuthService.Authenticate` when the
+   `Jellyfin-UserId` claim was missing. It is now `ResolveAsync` and the controller actions await it.
+8. **Remote commands reported success when nothing was delivered.** Jellyfin returns without error for a session with
+   no WebSocket (REST-only clients), so the dispatcher logged `pauseSent=True` / `result=sent` and the fallback moved on
+   to stop. The dispatcher now checks the session's controllers (`CanReceiveCommands`) and returns `false` when none
+   can deliver. The fallback skips such sessions with decision reason `no_remote_control`, re-checked every tick so it
+   acts as soon as the client reconnects. Dry run still logs the trigger and adds `remoteControl=<bool>`.
+   Verified: a REST-only session with dry run off logs one `no_remote_control` decision and sends nothing; a browser
+   session still receives message, pause, and stop.
+9. **Node 20 was past end of life.** CI (`setup-node`) and the harness build stage now use Node 24 (npm 11). Both
+   frontend bundles build unchanged. npm 11 prints an `install-scripts ... not yet covered by allowScripts` warning
+   for esbuild's `postinstall`; the build does not depend on it.
+
 ### Verified Safe
 
 - Jellyfin 12 added `AssertCanControl` and `ControllingUserId` overwriting to `SendPlaystateCommand` /
@@ -66,23 +86,8 @@ File Transformation has no 12.3-specific build yet; its `Release-12.2.0` build l
 
 ### Open (pre-existing, not changed in this upgrade)
 
-1. **Config page breaks under a Jellyfin base URL.** `Configuration/configPage.html` points the iframe at the absolute
-   path `/Plugins/Aysw/web/jellycheckr-config-ui-host.html`. With `BaseUrl` set (for example `/jellyfin`), Jellyfin's
-   `BaseUrlRedirectionMiddleware` redirects un-prefixed paths to the web app, so the iframe shows Jellyfin instead of
-   the config UI. Fix: set the iframe `src` from `ApiClient.getUrl('Plugins/Aysw/web/jellycheckr-config-ui-host.html')`
-   in the page script, keeping the absolute path as fallback. (The injected web loader already handles base URLs.)
-2. **Synchronous auth fallback remains.** When the `Jellyfin-UserId` claim is missing (not observed on 12.x),
-   `AuthenticatedUserIdResolver` still blocks on `IAuthService.Authenticate`. Making the resolver async would remove it.
-3. **Remote commands report success even when nothing is delivered.** `ISessionManager.SendPlaystateCommand` /
-   `SendMessageCommand` send through the session's WebSocket controllers; for a session without any (REST-only
-   clients) Jellyfin returns without error, so `JellyfinSessionCommandDispatcher` logs `pauseSent=True` /
-   `result=sent` and the fallback moves on to stop as if the pause landed. Checking
-   `SessionInfo.SupportsMediaControl` (or `SessionControllers`) before dispatching would make the logs truthful and
-   let the fallback skip sessions it cannot control.
-4. **Harness compose file requires the harness-set environment.** Running `docker compose -f
+1. **Harness compose file requires the harness-set environment.** Running `docker compose -f
    tools/harness/docker/compose.harness.yml build` directly passes empty build args (an empty
    `JellyfinPackageVersion` global property overrides the csproj default). Always go through `Invoke-Harness.ps1`.
-5. **Node 20 is past end of life** (April 2026) but is still used by CI and the harness build stage. jellyfin-web 12
-   itself builds with Node 24.
-6. **Warnings:** `CS0108` for `Plugin.ApplicationPaths` (hides `BasePlugin.ApplicationPaths`), `CS1591` missing XML
+2. **Warnings:** `CS0108` for `Plugin.ApplicationPaths` (hides `BasePlugin.ApplicationPaths`), `CS1591` missing XML
    docs, and a `tsc --noEmit` error inside `@preact/signals-core` typings in `apps/config-ui`.

@@ -10,57 +10,72 @@ namespace Jellycheckr.Server.Tests;
 public sealed class AuthenticatedUserIdResolverTests
 {
     [Fact]
-    public void Resolve_UsesJellyfinUserIdClaim_NormalizedToSessionFormat()
+    public async Task Resolve_UsesJellyfinUserIdClaim_NormalizedToSessionFormat()
     {
         var userId = Guid.NewGuid();
         var authService = new RecordingAuthService(_ => throw new InvalidOperationException("should not be called"));
         var resolver = CreateResolver(authService);
 
-        var resolved = resolver.Resolve(CreateContext(new Claim("Jellyfin-UserId", userId.ToString("N"))));
+        var resolved = await resolver.ResolveAsync(CreateContext(new Claim("Jellyfin-UserId", userId.ToString("N"))));
 
         Assert.Equal(userId.ToString("D"), resolved);
         Assert.Equal(0, authService.CallCount);
     }
 
     [Fact]
-    public void Resolve_ReturnsNull_ForApiKeyWithoutUser()
+    public async Task Resolve_ReturnsNull_ForApiKeyWithoutUser()
     {
         var authService = new RecordingAuthService(_ => throw new InvalidOperationException("should not be called"));
         var resolver = CreateResolver(authService);
 
-        var resolved = resolver.Resolve(CreateContext(new Claim("Jellyfin-UserId", Guid.Empty.ToString("N"))));
+        var resolved = await resolver.ResolveAsync(CreateContext(new Claim("Jellyfin-UserId", Guid.Empty.ToString("N"))));
 
         Assert.Null(resolved);
         Assert.Equal(0, authService.CallCount);
     }
 
     [Fact]
-    public void Resolve_FallsBackToAuthService_WhenClaimMissing()
+    public async Task Resolve_FallsBackToAuthService_WhenClaimMissing()
     {
         var user = new User("viewer", "auth-provider", "reset-provider");
         var authService = new RecordingAuthService(_ => new AuthorizationInfo { User = user });
         var resolver = CreateResolver(authService);
 
-        var resolved = resolver.Resolve(CreateContext());
+        var resolved = await resolver.ResolveAsync(CreateContext());
 
         Assert.Equal(user.Id.ToString("D"), resolved);
         Assert.Equal(1, authService.CallCount);
     }
 
     [Fact]
-    public void Resolve_ReturnsNull_WhenAuthServiceHasNoUser()
+    public async Task Resolve_AwaitsAuthService_InsteadOfBlocking()
     {
-        var resolver = CreateResolver(new RecordingAuthService(_ => new AuthorizationInfo()));
+        var user = new User("viewer", "auth-provider", "reset-provider");
+        var pending = new TaskCompletionSource<AuthorizationInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resolver = CreateResolver(new PendingAuthService(pending.Task));
 
-        Assert.Null(resolver.Resolve(CreateContext()));
+        var resolving = resolver.ResolveAsync(CreateContext());
+        Assert.False(resolving.IsCompleted);
+
+        pending.SetResult(new AuthorizationInfo { User = user });
+
+        Assert.Equal(user.Id.ToString("D"), await resolving);
     }
 
     [Fact]
-    public void Resolve_ReturnsNull_WhenAuthServiceThrows()
+    public async Task Resolve_ReturnsNull_WhenAuthServiceHasNoUser()
+    {
+        var resolver = CreateResolver(new RecordingAuthService(_ => new AuthorizationInfo()));
+
+        Assert.Null(await resolver.ResolveAsync(CreateContext()));
+    }
+
+    [Fact]
+    public async Task Resolve_ReturnsNull_WhenAuthServiceThrows()
     {
         var resolver = CreateResolver(new RecordingAuthService(_ => throw new InvalidOperationException("auth failed")));
 
-        Assert.Null(resolver.Resolve(CreateContext()));
+        Assert.Null(await resolver.ResolveAsync(CreateContext()));
     }
 
     private static AuthenticatedUserIdResolver CreateResolver(IAuthService authService)
@@ -85,5 +100,17 @@ public sealed class AuthenticatedUserIdResolverTests
             CallCount++;
             return Task.FromResult(_authenticate(request));
         }
+    }
+
+    private sealed class PendingAuthService : IAuthService
+    {
+        private readonly Task<AuthorizationInfo> _result;
+
+        public PendingAuthService(Task<AuthorizationInfo> result)
+        {
+            _result = result;
+        }
+
+        public Task<AuthorizationInfo> Authenticate(HttpRequest request) => _result;
     }
 }

@@ -33,7 +33,7 @@ from `/Plugins/Aysw/web/*`. Only `configPage.html` is an embedded resource.
 
 ## Toolchain And Commands
 
-Requirements: .NET 10 SDK, Node.js 20+ with npm, PowerShell 7 (`pwsh`) for harness and release scripts, Docker for
+Requirements: .NET 10 SDK, Node.js 24 with npm (CI and the harness build use 24), PowerShell 7 (`pwsh`) for harness and release scripts, Docker for
 the harness, Python 3 + Playwright for browser checks.
 
 ```bash
@@ -99,7 +99,8 @@ pre-existing. `npx tsc --noEmit` in `apps/config-ui` reports an error inside `@p
 - **User id format:** `AuthenticatedUserIdResolver` reads Jellyfin's `Jellyfin-UserId` claim (an `N`-format GUID) and
   normalizes it to the `D` format (`xxxxxxxx-xxxx-...`) used everywhere else in the plugin (session snapshots, session
   state, ownership checks). API keys carry `Guid.Empty` and resolve to "no user" (web-client endpoints return 403).
-  Keep every user id comparison in `D` format.
+  Keep every user id comparison in `D` format. If the claim is ever missing, the resolver awaits
+  `IAuthService.Authenticate` instead (`ResolveAsync`; never block on it).
 - Admin endpoints check the `Administrator` role claim (`AyswAdminController.IsAdmin`).
 
 ### Session Data (read via reflection)
@@ -121,9 +122,12 @@ Guids are stringified with `ToString()` (`D` format) - comparisons are only vali
 `SendMessageCommand` with the target session id as *both* controlling and target session. Since Jellyfin 12 these
 calls run `AssertCanControl(session, controllingSession)` and overwrite `PlaystateRequest.ControllingUserId`; a
 session controlling itself always passes. Commands are delivered through the session's controllers (the client's
-WebSocket). For a session without controllers (REST-only, like the harness's simulated playback) Jellyfin silently
-drops the command and the dispatcher still reports success. That is why the harness smoke run keeps
-`ServerFallbackDryRun=true` and the real-command path is covered by `tools/harness/browser/native-fallback-check.js`.
+WebSocket). For a session without one (REST-only, like the harness's simulated playback) Jellyfin returns without
+error and sends nothing, so the dispatcher checks `SessionInfo.SessionControllers` for a controller with
+`SupportsMediaControl` (`CanReceiveCommands`) and reports `false` instead of a false success. The fallback skips such
+sessions with decision reason `no_remote_control` (re-checked every tick); dry run still logs the trigger, with
+`remoteControl=False`. The harness smoke run keeps `ServerFallbackDryRun=true` for that reason, and the real-command
+path is covered by `tools/harness/browser/native-fallback-check.js`.
 
 Relevant Jellyfin source: `Emby.Server.Implementations/Session/SessionManager.cs`,
 `MediaBrowser.Model/Session/PlaystateRequest.cs`, `MediaBrowser.Model/Session/MessageCommand.cs`.
@@ -144,7 +148,9 @@ Relevant Jellyfin source: `Emby.Server.Implementations/Session/SessionManager.cs
   `window.Dashboard` (`src/utils/dashboard.js`, kept for plugins). Both are present in jellyfin-web 12.3.
 - DOM: the playing `<video>` element; exit-player fallbacks (`.btnBack`, then `history.back()`).
 - Dashboard plugin pages: legacy route `#/configurationpage?name=<plugin name>` loading `configPage.html`
-  (a `data-role="page"` div with an iframe to `/Plugins/Aysw/web/jellycheckr-config-ui-host.html`).
+  (a `data-role="page"` div with an iframe whose `src` the page script sets from
+  `ApiClient.getUrl('Plugins/Aysw/web/jellycheckr-config-ui-host.html')`, so a server base URL is included). jellyfin-web
+  runs the page's inline script; without it the iframe stays blank.
 
 ## Verification Layers
 
