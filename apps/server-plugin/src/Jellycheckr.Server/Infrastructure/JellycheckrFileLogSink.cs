@@ -116,7 +116,7 @@ internal static class JellycheckrFileLogSink
     private static IEnumerable<string> EnumerateLogDirectoryCandidates()
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var applicationPaths = Plugin.ApplicationPaths;
+        var applicationPaths = Plugin.SharedApplicationPaths;
         var configuredLogDirectory = applicationPaths?.LogDirectoryPath;
         if (!string.IsNullOrWhiteSpace(configuredLogDirectory) && seen.Add(configuredLogDirectory))
         {

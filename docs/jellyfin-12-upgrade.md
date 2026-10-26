@@ -84,10 +84,18 @@ Fixed in the follow-up pass (verified on 12.3 with the smoke run and browser che
 - `.headerButton-left` no longer exists in jellyfin-web 12.3; the Stop path falls back to `history.back()` and was
   verified to leave the player view.
 
-### Open (pre-existing, not changed in this upgrade)
+Build and tooling cleanup:
 
-1. **Harness compose file requires the harness-set environment.** Running `docker compose -f
-   tools/harness/docker/compose.harness.yml build` directly passes empty build args (an empty
-   `JellyfinPackageVersion` global property overrides the csproj default). Always go through `Invoke-Harness.ps1`.
-2. **Warnings:** `CS0108` for `Plugin.ApplicationPaths` (hides `BasePlugin.ApplicationPaths`), `CS1591` missing XML
-   docs, and a `tsc --noEmit` error inside `@preact/signals-core` typings in `apps/config-ui`.
+10. **Harness compose file ran with empty build args** when called directly (an empty `JellyfinPackageVersion` global
+    property overrides the csproj default). Every variable now uses `${VAR:?...}`, so compose stops with a message
+    pointing at `Invoke-Harness.ps1`.
+11. **Warnings.** `CS0108`: the static `Plugin.ApplicationPaths` hid `BasePlugin.ApplicationPaths`; renamed to
+    `Plugin.SharedApplicationPaths`. `CS1591` (313 missing XML docs) is suppressed: Jellyfin's Swagger only reads XML
+    docs from its own install directory, never from plugin folders. `apps/config-ui` `tsc --noEmit` failed inside
+    `@preact/signals-core` typings (`Disposable`); `skipLibCheck` is now set, as in `apps/web-client`.
+12. **CI never ran the frontend checks.** PR validation now runs `tsc --noEmit` for both frontends and the web-client
+    tests.
+
+### Open
+
+None from this audit.

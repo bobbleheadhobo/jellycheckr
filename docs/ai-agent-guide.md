@@ -58,9 +58,10 @@ pwsh ./tools/harness/scripts/Invoke-Harness.ps1 -Mode smoke -Version 12.3
 pwsh ./tools/harness/scripts/Invoke-Harness.ps1 -Mode down -Version 12.3
 ```
 
-Known noise: `CS1591` (missing XML docs) and `CS0108` (`Plugin.ApplicationPaths` hides the base member) warnings are
-pre-existing. `npx tsc --noEmit` in `apps/config-ui` reports an error inside `@preact/signals-core` typings
-(`Disposable`); the bundle build does not type-check and is unaffected.
+The plugin builds with no warnings (`CS1591` is suppressed in the csproj: Jellyfin's Swagger only loads XML docs from
+its own install directory). Both frontends type-check cleanly; PR validation runs the web-client tests and both
+`tsc --noEmit` checks, so keep them clean. The harness compose file refuses to run without the variables
+`Invoke-Harness.ps1` sets; do not call `docker compose` on it directly.
 
 ## Jellyfin Compatibility Contract
 

@@ -60,6 +60,21 @@ jobs:
             Write-Error $message
           }
 
+      - name: Check web client (typecheck and tests)
+        shell: bash
+        working-directory: apps/web-client
+        run: |
+          npm ci
+          npx tsc -p tsconfig.json --noEmit
+          npm test
+
+      - name: Check config UI (typecheck)
+        shell: bash
+        working-directory: apps/config-ui
+        run: |
+          npm ci
+          npx tsc -p tsconfig.json --noEmit
+
       - name: Restore test dependencies
         shell: pwsh
         run: dotnet restore apps/server-plugin/tests/Jellycheckr.Server.Tests/Jellycheckr.Server.Tests.csproj
