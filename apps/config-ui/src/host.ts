@@ -46,9 +46,9 @@ function getAuthHeaders(): Record<string, string> {
     return {};
   }
 
+  // Jellyfin 12 disables the legacy X-Emby-Token / X-MediaBrowser-Token headers by default.
   return {
-    'X-Emby-Token': token,
-    'X-MediaBrowser-Token': token
+    Authorization: `MediaBrowser Token="${token}"`
   };
 }
 

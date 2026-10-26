@@ -8,6 +8,7 @@ namespace Jellycheckr.Server.Services;
 
 public interface IJellyfinSessionCommandDispatcher
 {
+    bool CanReceiveCommands(string sessionId);
     Task<bool> TrySendPauseAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken);
     Task<bool> TrySendStopAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken);
     Task<bool> TrySendMessageAsync(string sessionId, string? controllingUserId, string message, CancellationToken cancellationToken);
@@ -24,6 +25,26 @@ public sealed class JellyfinSessionCommandDispatcher : IJellyfinSessionCommandDi
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+    }
+
+    public bool CanReceiveCommands(string sessionId)
+    {
+        var sessionManager = _serviceProvider.GetService<ISessionManager>();
+        if (sessionManager is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return HasCommandChannel(sessionManager, sessionId);
+        }
+        catch (Exception ex)
+        {
+            // A session closing concurrently disposes its controllers, which then throw ObjectDisposedException.
+            _logger.LogJellycheckrDebug(ex, "[Jellycheckr] Failed to check remote control for session={SessionId}.", sessionId);
+            return false;
+        }
     }
 
     public Task<bool> TrySendPauseAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken)
@@ -47,6 +68,12 @@ public sealed class JellyfinSessionCommandDispatcher : IJellyfinSessionCommandDi
 
         try
         {
+            if (!HasCommandChannel(sessionManager, sessionId))
+            {
+                _logger.LogJellycheckrDebug("[Jellycheckr] Message command not sent to session={SessionId}; it has no remote control connection.", sessionId);
+                return false;
+            }
+
             var command = (MessageCommand?)Activator.CreateInstance(typeof(MessageCommand));
             if (command is null)
             {
@@ -89,6 +116,12 @@ public sealed class JellyfinSessionCommandDispatcher : IJellyfinSessionCommandDi
 
         try
         {
+            if (!HasCommandChannel(sessionManager, sessionId))
+            {
+                _logger.LogJellycheckrDebug("[Jellycheckr] Playstate command {Command} not sent to session={SessionId}; it has no remote control connection.", command, sessionId);
+                return false;
+            }
+
             var request = new PlaystateRequest();
             SetPropertyIfPresent(request, "ControllingUserId", controllingUserId ?? string.Empty);
             SetPropertyIfPresent(request, "Command", command);
@@ -106,6 +139,14 @@ public sealed class JellyfinSessionCommandDispatcher : IJellyfinSessionCommandDi
             _logger.LogJellycheckrWarning(ex, "[Jellycheckr] Failed to send playstate command {Command} to session={SessionId}.", command, sessionId);
             return false;
         }
+    }
+
+    // Jellyfin delivers remote commands through the session's controllers (the client's WebSocket) and returns
+    // without error when none can deliver, so a REST-only session would otherwise look like a successful send.
+    private static bool HasCommandChannel(ISessionManager sessionManager, string sessionId)
+    {
+        var session = sessionManager.Sessions?.FirstOrDefault(s => string.Equals(s.Id, sessionId, StringComparison.Ordinal));
+        return session?.SessionControllers?.Any(controller => controller.SupportsMediaControl) == true;
     }
 
     private static void SetPropertyIfPresent(object target, string propertyName, object? value)

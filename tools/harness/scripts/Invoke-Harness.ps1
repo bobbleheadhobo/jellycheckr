@@ -48,15 +48,23 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 function Resolve-TargetFramework {
     param([Parameter(Mandatory = $true)][string]$JellyfinVersion)
 
-    if ($JellyfinVersion -match '^10\.11\.') {
-        return "net9.0"
-    }
-
-    if ($JellyfinVersion -match '^10\.9\.') {
-        return "net8.0"
+    if ($JellyfinVersion -match '^12\.') {
+        return "net10.0"
     }
 
     throw "Unsupported Jellyfin version '$JellyfinVersion'. Add a mapping to Resolve-TargetFramework in Invoke-Harness.ps1."
+}
+
+function Resolve-JellyfinPackageVersion {
+    param([Parameter(Mandatory = $true)][string]$JellyfinVersion)
+
+    # Build against the same Jellyfin packages the release ships with, so newer 12.x
+    # servers exercise the published plugin binary rather than a per-version rebuild.
+    if ($JellyfinVersion -match '^12\.') {
+        return "12.0.0"
+    }
+
+    throw "Unsupported Jellyfin version '$JellyfinVersion'. Add a mapping to Resolve-JellyfinPackageVersion in Invoke-Harness.ps1."
 }
 
 function Get-DeterministicHarnessServerId {
@@ -93,6 +101,7 @@ function New-HarnessContext {
 
     return [pscustomobject]@{
         Version = $JellyfinVersion
+        PackageVersion = Resolve-JellyfinPackageVersion -JellyfinVersion $JellyfinVersion
         TargetFramework = Resolve-TargetFramework -JellyfinVersion $JellyfinVersion
         ServerId = $serverId
         ServerName = $serverName
@@ -111,6 +120,7 @@ function Invoke-ComposeCommand {
 
     $envMap = @{
         "JELLYFIN_VERSION" = [string]$Context.Version
+        "JELLYFIN_PACKAGE_VERSION" = [string]$Context.PackageVersion
         "DOTNET_TARGET_FRAMEWORK" = [string]$Context.TargetFramework
         "HARNESS_SERVER_ID" = [string]$Context.ServerId
         "HARNESS_SERVER_NAME" = [string]$Context.ServerName
@@ -219,6 +229,12 @@ function Invoke-WebRequestAllowError {
             $requestParams.ContentType = $ContentType
         }
 
+        # PowerShell 7 throws HttpResponseException (not WebException) on error statuses;
+        # return those responses directly so callers can assert on the status code.
+        if ($PSVersionTable.PSVersion.Major -ge 7) {
+            $requestParams.SkipHttpErrorCheck = $true
+        }
+
         $response = Invoke-WebRequest @requestParams
         return [pscustomobject]@{
             StatusCode = [int]$response.StatusCode
@@ -275,8 +291,16 @@ function Assert-StatusCode {
     }
 }
 
-function New-EmbyAuthorizationHeader {
-    return 'MediaBrowser Client="JellycheckrHarness", Device="HarnessRunner", DeviceId="jellycheckr-harness", Version="1.0.0"'
+function New-AuthorizationHeaders {
+    param([string]$AccessToken = "")
+
+    # Jellyfin 12 disables the legacy X-Emby-Authorization / X-Emby-Token headers by default.
+    $value = 'MediaBrowser Client="JellycheckrHarness", Device="HarnessRunner", DeviceId="jellycheckr-harness", Version="1.0.0"'
+    if (-not [string]::IsNullOrWhiteSpace($AccessToken)) {
+        $value += ", Token=`"$AccessToken`""
+    }
+
+    return @{ "Authorization" = $value }
 }
 
 function Get-PublicServerInfo {
@@ -505,7 +529,7 @@ function Try-AuthenticateByName {
         [Parameter(Mandatory = $true)][string]$LoginPassword
     )
 
-    $headers = @{ "X-Emby-Authorization" = New-EmbyAuthorizationHeader }
+    $headers = New-AuthorizationHeaders
     $body = @{
         Username = $LoginUser
         Pw = $LoginPassword
@@ -530,7 +554,7 @@ function Try-BootstrapStartupCredentials {
         [Parameter(Mandatory = $true)][string]$LoginPassword
     )
 
-    $headers = @{ "X-Emby-Authorization" = New-EmbyAuthorizationHeader }
+    $headers = New-AuthorizationHeaders
     $startupBody = @{
         Name = $LoginUser
         Password = $LoginPassword
@@ -631,7 +655,7 @@ function Start-Harness {
     )
 
     if (-not $NoBuild) {
-        Write-Host "[harness] Building image for Jellyfin $($Context.Version) (target $($Context.TargetFramework))..."
+        Write-Host "[harness] Building image for Jellyfin $($Context.Version) (target $($Context.TargetFramework), packages $($Context.PackageVersion))..."
         Invoke-ComposeCommand -Context $Context -Arguments @("build")
     }
 
@@ -773,7 +797,7 @@ function Invoke-WebUiInjectionCheck {
         $_.Contains("Failed to register File Transformation callback for web UI injection")
     } | Select-Object -First 1
 
-    $requiresFileTransformation = $Context.Version -match '^10\.11\.'
+    $requiresFileTransformation = $Context.Version -match '^12\.'
 
     if ($requiresFileTransformation -and [string]::IsNullOrWhiteSpace([string]$registeredLine)) {
         $details = if (-not [string]::IsNullOrWhiteSpace([string]$registrationFailureLine)) {
@@ -789,6 +813,16 @@ function Invoke-WebUiInjectionCheck {
         throw "Web UI injection did not register on Jellyfin $($Context.Version). Details: $details"
     }
 
+    # Registration alone does not prove File Transformation rewrites the page on this Jellyfin build.
+    $indexHtmlInjected = $null
+    if ($requiresFileTransformation) {
+        $indexResponse = Invoke-WebRequestAllowError -Uri "$($Context.BaseUrl)/web/index.html" -TimeoutSeconds 15
+        $indexHtmlInjected = $indexResponse.StatusCode -eq 200 -and ([string]$indexResponse.Content).Contains('id="jellycheckr-web-loader"')
+        if (-not $indexHtmlInjected) {
+            throw "Web UI injection registered on Jellyfin $($Context.Version), but /web/index.html (HTTP $($indexResponse.StatusCode)) did not contain the Jellycheckr loader script."
+        }
+    }
+
     $status = if (-not [string]::IsNullOrWhiteSpace([string]$registeredLine)) {
         "registered"
     }
@@ -802,6 +836,7 @@ function Invoke-WebUiInjectionCheck {
     $result = [ordered]@{
         expected = $requiresFileTransformation
         status = $status
+        indexHtmlInjected = $indexHtmlInjected
         registeredLogLine = [string]$registeredLine
         notDetectedLogLine = [string]$notDetectedLine
         failureLogLine = [string]$registrationFailureLine
@@ -874,10 +909,7 @@ function Invoke-SmokeChecks {
     Wait-ForServerReady -Context $Context
 
     $authToken = Ensure-AuthToken -Context $Context -ExplicitToken $Token -LoginUser $Username -LoginPassword $Password
-    $authHeaders = @{
-        "X-Emby-Token" = $authToken
-        "X-Emby-Authorization" = New-EmbyAuthorizationHeader
-    }
+    $authHeaders = New-AuthorizationHeaders -AccessToken $authToken
 
     $assetEndpoints = @(
         "/Plugins/Aysw/web/jellycheckr-web.js",
@@ -1005,6 +1037,7 @@ function Invoke-SmokeChecks {
     $summary = [ordered]@{
         version = $Context.Version
         targetFramework = $Context.TargetFramework
+        packageVersion = $Context.PackageVersion
         baseUrl = $Context.BaseUrl
         checkedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
         configEndpoint = $configUri
@@ -1026,7 +1059,7 @@ function Invoke-SmokeChecks {
 switch ($Mode) {
     "build" {
         $context = New-HarnessContext -JellyfinVersion $Version -JellyfinPort $Port
-        Write-Host "[harness] Building image for Jellyfin $($context.Version) (target $($context.TargetFramework))..."
+        Write-Host "[harness] Building image for Jellyfin $($context.Version) (target $($context.TargetFramework), packages $($context.PackageVersion))..."
         Invoke-ComposeCommand -Context $context -Arguments @("build")
     }
     "up" {

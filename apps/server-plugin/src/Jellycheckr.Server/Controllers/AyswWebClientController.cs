@@ -29,11 +29,11 @@ public sealed class AyswWebClientController : ControllerBase
     }
 
     [HttpPost("register")]
-    public ActionResult<WebClientRegisterResponse> Register([FromBody] WebClientRegisterRequest request)
+    public async Task<ActionResult<WebClientRegisterResponse>> Register([FromBody] WebClientRegisterRequest request)
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(userId))
             {
                 _logger.LogJellycheckrWarning("[Jellycheckr] Web client register rejected due to missing authenticated user id.");
@@ -60,11 +60,11 @@ public sealed class AyswWebClientController : ControllerBase
     }
 
     [HttpPost("heartbeat")]
-    public ActionResult<WebClientHeartbeatResponse> Heartbeat([FromBody] WebClientHeartbeatRequest request)
+    public async Task<ActionResult<WebClientHeartbeatResponse>> Heartbeat([FromBody] WebClientHeartbeatRequest request)
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(userId))
             {
                 _logger.LogJellycheckrWarning("[Jellycheckr] Web client heartbeat rejected due to missing authenticated user id.");
@@ -92,11 +92,11 @@ public sealed class AyswWebClientController : ControllerBase
     }
 
     [HttpPost("unregister")]
-    public IActionResult Unregister([FromBody] WebClientUnregisterRequest request)
+    public async Task<IActionResult> Unregister([FromBody] WebClientUnregisterRequest request)
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(userId))
             {
                 _logger.LogJellycheckrWarning("[Jellycheckr] Web client unregister rejected due to missing authenticated user id.");

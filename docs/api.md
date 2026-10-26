@@ -2,7 +2,7 @@
 
 Base path: `/Plugins/Aysw` (alias: `/Plugins/jellycheckr`)
 
-Authentication: standard Jellyfin auth token required for all endpoints.
+Authentication: standard Jellyfin auth token required for all endpoints, sent as `Authorization: MediaBrowser Token="<token>"` (or the `ApiKey=<token>` query parameter). Jellyfin 12 ignores the legacy `X-Emby-Token` / `X-Emby-Authorization` headers and `api_key` parameter by default.
 Admin-only: `/admin/*`.
 
 ## GET /Plugins/Aysw/config

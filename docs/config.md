@@ -64,4 +64,5 @@ Missing fields are hydrated using server defaults before response.
 
 - `enableServerFallback=true` applies fallback behavior for stock native Jellyfin clients (for example Firestick / Android TV) where Jellycheckr cannot inject a prompt UI.
 - Fallback uses server-observed playback heuristics and Jellyfin pause/stop commands.
-- `serverFallbackDryRun=true` logs triggers without sending pause/stop commands (recommended for tuning).
+- `serverFallbackDryRun=true` logs triggers without sending pause/stop commands (recommended for tuning). The log line also shows `remoteControl=True|False`: whether the client has the live connection (WebSocket) Jellyfin needs to deliver commands.
+- Clients without that connection (REST-only) cannot be paused or stopped remotely; with dry run off, the fallback skips them with reason `no_remote_control`.

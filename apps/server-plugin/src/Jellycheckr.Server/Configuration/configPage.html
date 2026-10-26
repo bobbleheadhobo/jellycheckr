@@ -8,17 +8,19 @@
             </p>
 
             <div class="detailSection">
+                <!-- Relative to the dashboard's <base-url>/web/ page, so it keeps any server base URL (for example
+                     /jellyfin) and stays same-origin; Jellyfin redirects un-prefixed absolute paths to the web app. -->
                 <iframe
                     id="jellycheckrConfigFrame"
                     title="Jellycheckr configuration"
-                    src="/Plugins/Aysw/web/jellycheckr-config-ui-host.html"
+                    src="../Plugins/Aysw/web/jellycheckr-config-ui-host.html"
                     style="display:block; width:100%; min-height:72vh; height:72vh; border:0; background:transparent; border-radius:12px;"
                     loading="eager">
                 </iframe>
             </div>
 
             <p class="fieldDescription" style="margin-top:.75em;">
-                If the embedded UI fails to load, verify <code>/Plugins/Aysw/web/jellycheckr-config-ui-host.html</code>, <code>/Plugins/Aysw/web/jellycheckr-config-ui.js</code>, and <code>/Plugins/Aysw/web/jellycheckr-config-ui.css</code> return HTTP 200.
+                If the embedded UI fails to load, verify <code>Plugins/Aysw/web/jellycheckr-config-ui-host.html</code>, <code>Plugins/Aysw/web/jellycheckr-config-ui.js</code>, and <code>Plugins/Aysw/web/jellycheckr-config-ui.css</code> return HTTP 200 under your server address, including any base URL (for example <code>/jellyfin/Plugins/Aysw/web/...</code>).
             </p>
         </div>
     </div>

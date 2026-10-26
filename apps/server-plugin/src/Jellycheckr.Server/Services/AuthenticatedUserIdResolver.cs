@@ -8,11 +8,14 @@ namespace Jellycheckr.Server.Services;
 
 public interface IAuthenticatedUserIdResolver
 {
-    string? Resolve(HttpContext? httpContext);
+    ValueTask<string?> ResolveAsync(HttpContext? httpContext);
 }
 
 public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
 {
+    // Jellyfin's authentication handler stores the user id under this claim (InternalClaimTypes.UserId).
+    private const string JellyfinUserIdClaimType = "Jellyfin-UserId";
+
     private static readonly string[] UserIdClaimTypes =
     {
         ClaimTypes.NameIdentifier,
@@ -31,7 +34,7 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         _logger = logger;
     }
 
-    public string? Resolve(HttpContext? httpContext)
+    public async ValueTask<string?> ResolveAsync(HttpContext? httpContext)
     {
         if (httpContext is null)
         {
@@ -39,22 +42,30 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         }
 
         var principal = httpContext.User;
+
+        // The claim holds an "N"-formatted GUID; session snapshots use the "D" format, so normalize it.
+        // API keys authenticate without a user and carry Guid.Empty.
+        if (Guid.TryParse(principal.FindFirstValue(JellyfinUserIdClaimType), out var jellyfinUserId))
+        {
+            return FormatUserId(jellyfinUserId);
+        }
+
+        // Only GUID values can match session user ids, so other values (such as user names) are skipped.
         foreach (var claimType in UserIdClaimTypes)
         {
-            var claimValue = principal.FindFirstValue(claimType);
-            if (!string.IsNullOrWhiteSpace(claimValue))
+            if (Guid.TryParse(principal.FindFirstValue(claimType), out var claimUserId))
             {
-                return claimValue;
+                return FormatUserId(claimUserId);
             }
         }
 
+        // Jellyfin's authentication handler sets the claim above on every authenticated request; this only runs if that changes.
         try
         {
-            var authorizationInfo = _authService.Authenticate(httpContext.Request).GetAwaiter().GetResult();
-            var userId = authorizationInfo?.UserId.ToString();
-            if (!string.IsNullOrWhiteSpace(userId))
+            var authorizationInfo = await _authService.Authenticate(httpContext.Request).ConfigureAwait(false);
+            if (authorizationInfo is not null)
             {
-                return userId;
+                return FormatUserId(authorizationInfo.UserId);
             }
         }
         catch (Exception ex)
@@ -63,5 +74,10 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
         }
 
         return null;
+    }
+
+    private static string? FormatUserId(Guid userId)
+    {
+        return userId == Guid.Empty ? null : userId.ToString("D");
     }
 }
