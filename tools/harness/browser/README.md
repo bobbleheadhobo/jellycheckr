@@ -58,6 +58,7 @@ Each script writes `result.json` and screenshots into its output directory. A pa
 | `web-prompt-check.js` | Loader injected into `index.html`, `window.JellycheckrAysw` mounts, register/interaction/prompt-shown/ack calls succeed with `Authorization: MediaBrowser`, modal appears, Continue acks / Stop pauses and leaves the player view |
 | `config-page-check.js` | Dashboard route `#/configurationpage?name=Jellycheckr AYSW` renders the iframe, admin config GET/PUT succeed via `ApiClient.ajax` and via the `fetch()` fallback |
 | `native-fallback-check.js` | With the web runtime blocked, the server sends DisplayMessage, Pause, then Stop after the grace period over Jellyfin's WebSocket (`ISessionManager` remote control path) |
+| `moonfin-sim.js` | No browser: talks to Jellyfin the way Moonfin-Core (Android TV) does (same auth header, capabilities, `/socket?ApiKey=` WebSocket, progress with `PositionTicks` every 5 s) and obeys Pause/Stop. Seed like step 5 with `DeveloperPromptAfterSeconds` ~20, then `node tools/harness/browser/moonfin-sim.js http://127.0.0.1:58096 <itemId> 150` |
 
 ## Notes
 
