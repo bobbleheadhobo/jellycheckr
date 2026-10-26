@@ -18,7 +18,9 @@ Run them whenever you change `apps/web-client`, `apps/config-ui`, auth headers, 
 ## Steps
 
 ```bash
-# 1. Start a fresh container (no smoke run, so no startup wizard has been completed yet)
+# 1. Start a fresh container. Do not reuse a smoke-run container: the smoke run ends by disabling and
+#    uninstalling Jellycheckr (lifecycle check), so the plugin's assets return 404 afterwards. One `up`
+#    container serves every step below, including a base URL test (change BaseUrl, `docker restart`).
 pwsh ./tools/harness/scripts/Invoke-Harness.ps1 -Mode up -Version 12.3
 C=$(docker ps -q --filter name=jellycheckrharness123)
 OUT=tools/harness/artifacts/browser   # git-ignored

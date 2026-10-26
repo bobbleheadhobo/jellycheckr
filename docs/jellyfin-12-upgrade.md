@@ -26,14 +26,16 @@ this plugin.
 
 | Check | 12.3 | 12.0 |
 | --- | --- | --- |
-| Unit tests (60) against `12.0.0` and `12.3.0` packages | pass | pass |
+| Unit tests (75) against `12.0.0` and `12.3.0` packages | pass | pass |
 | Package validation (`Validate-PluginPackage.ps1`, `targetAbi` 12.0.0.0) | pass | n/a |
 | Harness smoke (load, assets, auth, ownership 403s, developer fallback, injection + `index.html` loader, disable/uninstall) | pass | pass |
-| Browser: web prompt shown, Continue acknowledged | pass | not run |
-| Browser: web prompt Stop pauses and leaves the player view | pass | not run |
-| Browser: config page load + save via `ApiClient.ajax` and via the `fetch()` fallback | pass | not run |
-| Browser: native-client fallback sends real message, pause, and stop (after grace) | pass | not run |
-| Legacy header control: `X-Emby-Token` -> 401, `Authorization: MediaBrowser` -> 200 | confirmed | not run |
+| Browser: web prompt shown, Continue acknowledged | pass | pass |
+| Browser: web prompt Stop pauses and leaves the player view | pass | pass |
+| Browser: config page load + save via `ApiClient.ajax` and via the `fetch()` fallback | pass | pass |
+| Browser: config page load + save under a `/jellyfin` base URL, and after navigating away and back | pass | pass |
+| Browser: native-client fallback sends real message, pause, and stop (after grace) | pass | pass |
+| REST-only session with dry run off: one `no_remote_control` decision, no commands sent | pass | pass |
+| Legacy header control: `X-Emby-Token` / `api_key` -> 401, `Authorization: MediaBrowser` -> 200 | confirmed | confirmed |
 
 File Transformation has no 12.3-specific build yet; its `Release-12.2.0` build loads and injects correctly on 12.3.
 
