@@ -14,7 +14,7 @@ public sealed class Plugin : BasePlugin<Models.PluginConfig>, IHasWebPages
         : base(applicationPaths, xmlSerializer)
     {
         Instance = this;
-        ApplicationPaths = applicationPaths;
+        SharedApplicationPaths = applicationPaths;
 
         var assemblyVersion = GetType().Assembly.GetName().Version?.ToString();
         if (!string.IsNullOrWhiteSpace(assemblyVersion))
@@ -29,7 +29,8 @@ public sealed class Plugin : BasePlugin<Models.PluginConfig>, IHasWebPages
 
     public static Plugin? Instance { get; private set; }
 
-    public static IApplicationPaths? ApplicationPaths { get; private set; }
+    // Static copy for code without a Plugin instance; named apart from BasePlugin.ApplicationPaths to avoid hiding it.
+    public static IApplicationPaths? SharedApplicationPaths { get; private set; }
 
     public IEnumerable<PluginPageInfo> GetPages()
     {

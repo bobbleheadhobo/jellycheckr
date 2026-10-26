@@ -38,11 +38,11 @@ public sealed class AyswController : ControllerBase
     }
 
     [HttpGet("config")]
-    public ActionResult<EffectiveConfigResponse> GetConfig()
+    public async Task<ActionResult<EffectiveConfigResponse>> GetConfig()
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             var effectiveConfig = _configService.GetEffectiveConfig(userId);
             _logger.LogJellycheckrTrace(
                 "GET /config userId={UserId} enabled={Enabled} fallbackEnabled={FallbackEnabled}",
@@ -59,11 +59,11 @@ public sealed class AyswController : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/ack")]
-    public ActionResult<AckResponse> Ack(string sessionId, [FromBody] AckRequest request)
+    public async Task<ActionResult<AckResponse>> Ack(string sessionId, [FromBody] AckRequest request)
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             if (!_sessionOwnershipValidator.CanMutateSession(userId, sessionId))
             {
                 _logger.LogJellycheckrWarning(
@@ -111,11 +111,11 @@ public sealed class AyswController : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/interaction")]
-    public ActionResult<InteractionResponse> Interaction(string sessionId, [FromBody] InteractionRequest request)
+    public async Task<ActionResult<InteractionResponse>> Interaction(string sessionId, [FromBody] InteractionRequest request)
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             if (!_sessionOwnershipValidator.CanMutateSession(userId, sessionId))
             {
                 _logger.LogJellycheckrWarning(
@@ -161,11 +161,11 @@ public sealed class AyswController : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/prompt-shown")]
-    public IActionResult PromptShown(string sessionId, [FromBody] PromptShownRequest request)
+    public async Task<IActionResult> PromptShown(string sessionId, [FromBody] PromptShownRequest request)
     {
         try
         {
-            var userId = _authenticatedUserIdResolver.Resolve(HttpContext);
+            var userId = await _authenticatedUserIdResolver.ResolveAsync(HttpContext).ConfigureAwait(false);
             if (!_sessionOwnershipValidator.CanMutateSession(userId, sessionId))
             {
                 _logger.LogJellycheckrWarning(

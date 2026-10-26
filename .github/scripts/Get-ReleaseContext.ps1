@@ -130,7 +130,7 @@ function New-ManifestReleaseBody {
 function Get-ProjectDefaults {
     $defaults = [ordered]@{
         BaselineVersion = "0.1.0"
-        TargetAbi = "10.9.11.0"
+        TargetAbi = "12.0.0.0"
     }
 
     if (-not (Test-Path -LiteralPath $ProjectFilePath)) {

@@ -1,15 +1,17 @@
-﻿services:
+﻿# Run through tools/harness/scripts/Invoke-Harness.ps1, which sets every ${...} variable below.
+services:
   jellyfin-harness:
-    image: jellycheckr/harness:${JELLYFIN_VERSION}
-    hostname: ${HARNESS_SERVER_NAME}
+    image: jellycheckr/harness:${JELLYFIN_VERSION:?set by tools/harness/scripts/Invoke-Harness.ps1}
+    hostname: ${HARNESS_SERVER_NAME:?set by tools/harness/scripts/Invoke-Harness.ps1}
     build:
       context: ../../..
       dockerfile: tools/harness/docker/Dockerfile
       args:
-        JELLYFIN_VERSION: ${JELLYFIN_VERSION}
-        DOTNET_TARGET_FRAMEWORK: ${DOTNET_TARGET_FRAMEWORK}
-        HARNESS_SERVER_ID: ${HARNESS_SERVER_ID}
+        JELLYFIN_VERSION: ${JELLYFIN_VERSION:?set by tools/harness/scripts/Invoke-Harness.ps1}
+        JELLYFIN_PACKAGE_VERSION: ${JELLYFIN_PACKAGE_VERSION:?set by tools/harness/scripts/Invoke-Harness.ps1}
+        DOTNET_TARGET_FRAMEWORK: ${DOTNET_TARGET_FRAMEWORK:?set by tools/harness/scripts/Invoke-Harness.ps1}
+        HARNESS_SERVER_ID: ${HARNESS_SERVER_ID:?set by tools/harness/scripts/Invoke-Harness.ps1}
     ports:
-      - "${JELLYFIN_PORT}:8096"
+      - "${JELLYFIN_PORT:?set by tools/harness/scripts/Invoke-Harness.ps1}:8096"
     environment:
-      - JELLYFIN_PublishedServerUrl=http://127.0.0.1:${JELLYFIN_PORT}
+      - JELLYFIN_PublishedServerUrl=http://127.0.0.1:${JELLYFIN_PORT:?set by tools/harness/scripts/Invoke-Harness.ps1}

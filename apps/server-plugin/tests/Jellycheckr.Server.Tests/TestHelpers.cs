@@ -102,14 +102,28 @@ internal sealed class StubSessionSnapshotProvider : IServerFallbackSessionSnapsh
 
 internal sealed class StubJellyfinSessionCommandDispatcher : IJellyfinSessionCommandDispatcher
 {
+    public bool CanReceive { get; set; } = true;
+
+    public List<string> SentCommands { get; } = new();
+
+    public HashSet<string> FailingCommands { get; } = new();
+
+    public bool CanReceiveCommands(string sessionId) => CanReceive;
+
     public Task<bool> TrySendPauseAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken)
-        => Task.FromResult(true);
+        => Record("pause");
 
     public Task<bool> TrySendStopAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken)
-        => Task.FromResult(true);
+        => Record("stop");
 
     public Task<bool> TrySendMessageAsync(string sessionId, string? controllingUserId, string message, CancellationToken cancellationToken)
-        => Task.FromResult(true);
+        => Record("message");
+
+    private Task<bool> Record(string command)
+    {
+        SentCommands.Add(command);
+        return Task.FromResult(CanReceive && !FailingCommands.Contains(command));
+    }
 }
 
 internal sealed class StubSessionOwnershipValidator : ISessionOwnershipValidator

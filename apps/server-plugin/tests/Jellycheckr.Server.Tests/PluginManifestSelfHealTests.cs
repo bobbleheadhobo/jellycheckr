@@ -26,7 +26,7 @@ public sealed class PluginManifestSelfHealTests
                   "name": "Jellycheckr AYSW",
                   "version": "0.1.2",
                   "packageVersion": "0.1.2",
-                  "targetAbi": "10.11.8.0",
+                  "targetAbi": "12.0.0.0",
                   "dependencies": []
                 }
                 """);
@@ -40,7 +40,7 @@ public sealed class PluginManifestSelfHealTests
             var repairedManifest = JsonNode.Parse(File.ReadAllText(metaPath))!.AsObject();
             Assert.Equal("0.1.2.0", repairedManifest["version"]?.GetValue<string>());
             Assert.Equal("0.1.2", repairedManifest["packageVersion"]?.GetValue<string>());
-            Assert.Equal("10.11.8.0", repairedManifest["targetAbi"]?.GetValue<string>());
+            Assert.Equal("12.0.0.0", repairedManifest["targetAbi"]?.GetValue<string>());
             Assert.Contains(
                 logger.Entries,
                 entry => entry.Level == LogLevel.Warning

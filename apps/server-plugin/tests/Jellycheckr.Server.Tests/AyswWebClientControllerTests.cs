@@ -11,22 +11,22 @@ namespace Jellycheckr.Server.Tests;
 public sealed class AyswWebClientControllerTests
 {
     [Fact]
-    public void Unregister_ReturnsForbidden_WhenServiceRejectsOwnership()
+    public async Task Unregister_ReturnsForbidden_WhenServiceRejectsOwnership()
     {
         var controller = CreateController(new UnauthorizedUnregisterService(), resolvedUserId: "u1");
 
-        var result = controller.Unregister(new WebClientUnregisterRequest { SessionId = "s1" });
+        var result = await controller.Unregister(new WebClientUnregisterRequest { SessionId = "s1" });
 
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
     }
 
     [Fact]
-    public void Unregister_ReturnsForbidden_WhenAuthenticatedUserIdMissing()
+    public async Task Unregister_ReturnsForbidden_WhenAuthenticatedUserIdMissing()
     {
         var controller = CreateController(new NoopRegistrationService(), resolvedUserId: null);
 
-        var result = controller.Unregister(new WebClientUnregisterRequest { SessionId = "s1" });
+        var result = await controller.Unregister(new WebClientUnregisterRequest { SessionId = "s1" });
 
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, objectResult.StatusCode);
@@ -62,9 +62,9 @@ public sealed class AyswWebClientControllerTests
             _userId = userId;
         }
 
-        public string? Resolve(HttpContext? httpContext)
+        public ValueTask<string?> ResolveAsync(HttpContext? httpContext)
         {
-            return _userId;
+            return ValueTask.FromResult(_userId);
         }
     }
 

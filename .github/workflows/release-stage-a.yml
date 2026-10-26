@@ -55,13 +55,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
-            9.0.x
+            10.0.x
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: npm
           cache-dependency-path: |
             apps/config-ui/package-lock.json
@@ -178,7 +177,7 @@ jobs:
           dotnet publish `
             apps/server-plugin/src/Jellycheckr.Server/Jellycheckr.Server.csproj `
             -c Release `
-            -f net8.0 `
+            -f net10.0 `
             -o $publishDirectory `
             /p:Version=${{ steps.release_context.outputs.release_version }} `
             /p:JellycheckrManifestVersion=${{ steps.release_context.outputs.manifest_version }} `

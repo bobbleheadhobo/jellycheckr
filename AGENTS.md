@@ -1,6 +1,8 @@
 # Project Specifics 
 This project is not live and is in active development. We do not need to concern ourselves with backwards compatibility right now, However we should play close attention not to break existing working functionality.
 
+Never put `Claude-Session:` trailers or other claude.ai session links in commit messages or PR descriptions. Keep the `Co-Authored-By:` trailer.
+
 # .NET Development Rules
 
 You are a senior .NET backend developer and an expert in C#, ASP.NET Core, and Entity Framework Core.
