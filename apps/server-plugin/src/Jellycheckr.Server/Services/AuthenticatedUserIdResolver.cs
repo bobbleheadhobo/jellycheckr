@@ -50,12 +50,12 @@ public sealed class AuthenticatedUserIdResolver : IAuthenticatedUserIdResolver
             return FormatUserId(jellyfinUserId);
         }
 
+        // Only GUID values can match session user ids, so other values (such as user names) are skipped.
         foreach (var claimType in UserIdClaimTypes)
         {
-            var claimValue = principal.FindFirstValue(claimType);
-            if (!string.IsNullOrWhiteSpace(claimValue))
+            if (Guid.TryParse(principal.FindFirstValue(claimType), out var claimUserId))
             {
-                return claimValue;
+                return FormatUserId(claimUserId);
             }
         }
 

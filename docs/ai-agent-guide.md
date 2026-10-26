@@ -58,8 +58,8 @@ pwsh ./tools/harness/scripts/Invoke-Harness.ps1 -Mode smoke -Version 12.3
 pwsh ./tools/harness/scripts/Invoke-Harness.ps1 -Mode down -Version 12.3
 ```
 
-The plugin builds with no warnings (`CS1591` is suppressed in the csproj: Jellyfin's Swagger only loads XML docs from
-its own install directory). Both frontends type-check cleanly; PR validation runs the web-client tests and both
+The plugin builds with no warnings. It does not generate an XML doc file: Jellyfin's Swagger only loads XML docs from
+its own install directory, so a plugin's file would never be read. Both frontends type-check cleanly; PR validation runs the web-client tests and both
 `tsc --noEmit` checks, so keep them clean. The harness compose file refuses to run without the variables
 `Invoke-Harness.ps1` sets; do not call `docker compose` on it directly.
 
@@ -149,9 +149,11 @@ Relevant Jellyfin source: `Emby.Server.Implementations/Session/SessionManager.cs
   `window.Dashboard` (`src/utils/dashboard.js`, kept for plugins). Both are present in jellyfin-web 12.3.
 - DOM: the playing `<video>` element; exit-player fallbacks (`.btnBack`, then `history.back()`).
 - Dashboard plugin pages: legacy route `#/configurationpage?name=<plugin name>` loading `configPage.html`
-  (a `data-role="page"` div with an iframe whose `src` the page script sets from
-  `ApiClient.getUrl('Plugins/Aysw/web/jellycheckr-config-ui-host.html')`, so a server base URL is included). jellyfin-web
-  runs the page's inline script; without it the iframe stays blank.
+  (a `data-role="page"` div with an iframe whose `src` is the relative `../Plugins/Aysw/web/jellycheckr-config-ui-host.html`).
+  The page lives at `<base-url>/web/`, so the relative path keeps a server base URL and stays same-origin, which the
+  config UI needs to read `parent.ApiClient`. Do not make it absolute (Jellyfin redirects un-prefixed paths to the web
+  app under a base URL) or build it from `ApiClient.getUrl` (its server address can be a different origin). jellyfin-web
+  only runs a plugin page's inline scripts through jQuery, so keep the page working without them.
 
 ## Verification Layers
 

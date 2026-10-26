@@ -35,6 +35,32 @@ public sealed class AuthenticatedUserIdResolverTests
     }
 
     [Fact]
+    public async Task Resolve_NormalizesGuidFromOtherUserIdClaims()
+    {
+        var userId = Guid.NewGuid();
+        var authService = new RecordingAuthService(_ => throw new InvalidOperationException("should not be called"));
+        var resolver = CreateResolver(authService);
+
+        var resolved = await resolver.ResolveAsync(CreateContext(new Claim(ClaimTypes.NameIdentifier, userId.ToString("N"))));
+
+        Assert.Equal(userId.ToString("D"), resolved);
+        Assert.Equal(0, authService.CallCount);
+    }
+
+    [Fact]
+    public async Task Resolve_SkipsNonGuidUserIdClaims()
+    {
+        var user = new User("viewer", "auth-provider", "reset-provider");
+        var authService = new RecordingAuthService(_ => new AuthorizationInfo { User = user });
+        var resolver = CreateResolver(authService);
+
+        var resolved = await resolver.ResolveAsync(CreateContext(new Claim(ClaimTypes.NameIdentifier, "viewer")));
+
+        Assert.Equal(user.Id.ToString("D"), resolved);
+        Assert.Equal(1, authService.CallCount);
+    }
+
+    [Fact]
     public async Task Resolve_FallsBackToAuthService_WhenClaimMissing()
     {
         var user = new User("viewer", "auth-provider", "reset-provider");

@@ -54,6 +54,47 @@ public sealed class ServerFallbackEnforcementServiceRemoteControlTests
     }
 
     [Fact]
+    public async Task FailedPause_DoesNotScheduleStop()
+    {
+        var store = new SessionStateStore(NullLogger<SessionStateStore>.Instance);
+        var state = CreateTriggeredState(store);
+        var dispatcher = new StubJellyfinSessionCommandDispatcher();
+        dispatcher.FailingCommands.Add("pause");
+        var service = CreateService(store, dispatcher, new ListLogger<ServerFallbackEnforcementService>());
+
+        await InvokeEvaluateSessionsAsync(service, CreateConfig(dryRun: false));
+
+        Assert.Equal(new[] { "message", "pause" }, dispatcher.SentCommands);
+        Assert.Equal(ServerFallbackPhase.Monitoring, state.FallbackPhase);
+        Assert.Null(state.PauseGraceDeadlineUtc);
+        Assert.Equal("failed", state.LastFallbackActionResult);
+        Assert.Equal(Now.AddMinutes(30), state.NextEligiblePromptUtc);
+    }
+
+    [Theory]
+    [InlineData(true, "sent_after_grace")]
+    [InlineData(false, "failed_after_grace")]
+    public async Task GraceExpiry_ReportsWhetherStopWasDelivered(bool canReceive, string expectedResult)
+    {
+        var store = new SessionStateStore(NullLogger<SessionStateStore>.Instance);
+        var state = CreateTriggeredState(store);
+        state.IsPaused = true;
+        state.FallbackPhase = ServerFallbackPhase.PauseGracePending;
+        state.PauseIssuedUtc = Now.AddSeconds(-60);
+        state.PauseGraceDeadlineUtc = Now.AddSeconds(-1);
+        state.LastInferredActivityUtc = Now.AddMinutes(-2);
+        var dispatcher = new StubJellyfinSessionCommandDispatcher { CanReceive = canReceive };
+        var service = CreateService(store, dispatcher, new ListLogger<ServerFallbackEnforcementService>());
+
+        await InvokeEvaluateSessionsAsync(service, CreateConfig(dryRun: false));
+
+        Assert.Equal(new[] { "stop" }, dispatcher.SentCommands);
+        Assert.Equal(expectedResult, state.LastFallbackActionResult);
+        Assert.Equal(ServerFallbackPhase.Monitoring, state.FallbackPhase);
+        Assert.Equal(canReceive ? DateTimeOffset.MinValue : Now.AddMinutes(30), state.NextEligiblePromptUtc);
+    }
+
+    [Fact]
     public async Task DryRun_StillReportsTrigger_ForSessionWithoutRemoteControl()
     {
         var store = new SessionStateStore(NullLogger<SessionStateStore>.Instance);

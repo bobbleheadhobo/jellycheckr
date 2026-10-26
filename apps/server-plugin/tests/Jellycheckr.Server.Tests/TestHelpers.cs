@@ -106,6 +106,8 @@ internal sealed class StubJellyfinSessionCommandDispatcher : IJellyfinSessionCom
 
     public List<string> SentCommands { get; } = new();
 
+    public HashSet<string> FailingCommands { get; } = new();
+
     public bool CanReceiveCommands(string sessionId) => CanReceive;
 
     public Task<bool> TrySendPauseAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken)
@@ -120,7 +122,7 @@ internal sealed class StubJellyfinSessionCommandDispatcher : IJellyfinSessionCom
     private Task<bool> Record(string command)
     {
         SentCommands.Add(command);
-        return Task.FromResult(CanReceive);
+        return Task.FromResult(CanReceive && !FailingCommands.Contains(command));
     }
 }
 

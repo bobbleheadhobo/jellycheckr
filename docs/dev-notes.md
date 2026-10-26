@@ -156,6 +156,7 @@ Release note for the next build:
 - Start with `serverFallbackDryRun=true` to confirm triggers before sending pause/stop commands.
 - Watch Jellyfin logs for `Server fallback trigger`, `pause initiated`, and `grace expired` messages.
 - `reason=no_remote_control` (or `remoteControl=False` in dry run) means the client has no WebSocket connection, so Jellyfin cannot deliver pause/stop to it.
+- `action=pause result=failed; stop not scheduled` means the pause could not be delivered; the fallback waits for the cooldown instead of stopping playback.
 - Native clients do not show the Jellycheckr modal; fallback uses Jellyfin session telemetry and remote commands.
 
 ## Tested Compatibility

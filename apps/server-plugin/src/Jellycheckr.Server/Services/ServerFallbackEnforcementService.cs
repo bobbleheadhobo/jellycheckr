@@ -228,11 +228,22 @@ public sealed class ServerFallbackEnforcementService : BackgroundService
         }
 
         var pauseSent = await _commandDispatcher.TrySendPauseAsync(state.SessionId, state.UserId, cancellationToken).ConfigureAwait(false);
+        state.LastFallbackAction = "pause";
+        if (!pauseSent)
+        {
+            // Without a delivered pause the viewer never got the grace period, so do not follow up with a stop.
+            state.LastFallbackActionResult = "failed";
+            _logger.LogJellycheckrInformation(
+                "[Jellycheckr] Fallback action decision session={SessionId} action=pause result=failed; stop not scheduled.",
+                state.SessionId);
+            ApplyFallbackResetAndCooldown(state, nowUtc, config.CooldownMinutes);
+            return;
+        }
+
         state.FallbackPhase = ServerFallbackPhase.PauseGracePending;
         state.PauseIssuedUtc = nowUtc;
         state.PauseGraceDeadlineUtc = nowUtc.AddSeconds(Math.Max(5, config.ServerFallbackPauseGraceSeconds));
-        state.LastFallbackAction = "pause";
-        state.LastFallbackActionResult = pauseSent ? "sent" : "failed";
+        state.LastFallbackActionResult = "sent";
 
         _logger.LogJellycheckrInformation(
             "[Jellycheckr] Server fallback pause initiated for session={SessionId}; graceUntilUtc={GraceUntilUtc} pauseSent={PauseSent}.",

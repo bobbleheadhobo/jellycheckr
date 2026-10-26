@@ -4,9 +4,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Jellycheckr.Server</RootNamespace>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- Jellyfin's Swagger only loads XML docs from its own install directory, so missing plugin docs are not reported. -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <Version Condition="'$(Version)' == ''">0.1.0</Version>
     <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == ''">12.0.0</JellyfinPackageVersion>
     <JellycheckrPluginGuid>a53af988-9d8f-4a7c-8d5f-f902fd90e4bd</JellycheckrPluginGuid>

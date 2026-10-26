@@ -34,6 +34,14 @@ public sealed class JellyfinSessionCommandDispatcherTests
     }
 
     [Fact]
+    public void CanReceiveCommands_IsFalse_WhenControllerIsDisposed()
+    {
+        var (dispatcher, _) = CreateDispatcher(CreateSession("s1", new DisposedSessionController()));
+
+        Assert.False(dispatcher.CanReceiveCommands("s1"));
+    }
+
+    [Fact]
     public async Task TrySend_ReportsFailure_AndSendsNothing_ForRestOnlySession()
     {
         var (dispatcher, sessionManager) = CreateDispatcher(CreateSession("s1"));
@@ -51,8 +59,11 @@ public sealed class JellyfinSessionCommandDispatcherTests
 
         Assert.True(await dispatcher.TrySendMessageAsync("s1", null, "still watching?", CancellationToken.None));
         Assert.True(await dispatcher.TrySendPauseAsync("s1", null, CancellationToken.None));
+        Assert.True(await dispatcher.TrySendStopAsync("s1", null, CancellationToken.None));
 
-        Assert.Equal(new[] { nameof(ISessionManager.SendMessageCommand), nameof(ISessionManager.SendPlaystateCommand) }, sessionManager.SentCommands);
+        Assert.Equal(
+            new[] { nameof(ISessionManager.SendMessageCommand), nameof(ISessionManager.SendPlaystateCommand), nameof(ISessionManager.SendPlaystateCommand) },
+            sessionManager.SentCommands);
     }
 
     private static SessionInfo CreateSession(string id, params ISessionController[] controllers)
@@ -96,6 +107,17 @@ public sealed class JellyfinSessionCommandDispatcherTests
 
         public Task SendMessage<T>(SessionMessageType name, Guid messageId, T data, CancellationToken cancellationToken)
             => Task.CompletedTask;
+    }
+
+    // Mirrors Jellyfin's WebSocketController after its session closed.
+    private sealed class DisposedSessionController : ISessionController
+    {
+        public bool IsSessionActive => throw new ObjectDisposedException(nameof(DisposedSessionController));
+
+        public bool SupportsMediaControl => throw new ObjectDisposedException(nameof(DisposedSessionController));
+
+        public Task SendMessage<T>(SessionMessageType name, Guid messageId, T data, CancellationToken cancellationToken)
+            => throw new ObjectDisposedException(nameof(DisposedSessionController));
     }
 
     // ISessionManager is large; only the members the dispatcher uses are implemented.

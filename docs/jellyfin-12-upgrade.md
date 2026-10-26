@@ -58,16 +58,18 @@ Fixed in the follow-up pass (verified on 12.3 with the smoke run and browser che
 
 6. **Config page broke under a Jellyfin base URL.** `configPage.html` pointed the iframe at the absolute path
    `/Plugins/Aysw/web/jellycheckr-config-ui-host.html`; with `BaseUrl=/jellyfin`, Jellyfin's
-   `BaseUrlRedirectionMiddleware` redirects that path to `/jellyfin/web/`, so the iframe showed Jellyfin. The page
-   script now sets the iframe `src` from `ApiClient.getUrl(...)` (absolute path only if `ApiClient` is missing).
-   Verified: config load + save under `/jellyfin` via `ApiClient.ajax` and the `fetch()` fallback.
+   `BaseUrlRedirectionMiddleware` redirects that path to `/jellyfin/web/`, so the iframe showed Jellyfin. The iframe
+   `src` is now the relative `../Plugins/Aysw/web/jellycheckr-config-ui-host.html` (resolved against
+   `<base-url>/web/`), which needs no script and stays same-origin. Verified: config load + save with and without
+   `/jellyfin`, via `ApiClient.ajax` and the `fetch()` fallback.
 7. **Synchronous auth fallback.** `AuthenticatedUserIdResolver.Resolve` blocked on `IAuthService.Authenticate` when the
    `Jellyfin-UserId` claim was missing. It is now `ResolveAsync` and the controller actions await it.
 8. **Remote commands reported success when nothing was delivered.** Jellyfin returns without error for a session with
    no WebSocket (REST-only clients), so the dispatcher logged `pauseSent=True` / `result=sent` and the fallback moved on
    to stop. The dispatcher now checks the session's controllers (`CanReceiveCommands`) and returns `false` when none
    can deliver. The fallback skips such sessions with decision reason `no_remote_control`, re-checked every tick so it
-   acts as soon as the client reconnects. Dry run still logs the trigger and adds `remoteControl=<bool>`.
+   acts as soon as the client reconnects. Dry run still logs the trigger and adds `remoteControl=<bool>`. If the
+   pause itself fails, the fallback records `pause` / `failed` and applies the cooldown instead of scheduling a stop.
    Verified: a REST-only session with dry run off logs one `no_remote_control` decision and sends nothing; a browser
    session still receives message, pause, and stop.
 9. **Node 20 was past end of life.** CI (`setup-node`) and the harness build stage now use Node 24 (npm 11). Both
@@ -90,8 +92,8 @@ Build and tooling cleanup:
     property overrides the csproj default). Every variable now uses `${VAR:?...}`, so compose stops with a message
     pointing at `Invoke-Harness.ps1`.
 11. **Warnings.** `CS0108`: the static `Plugin.ApplicationPaths` hid `BasePlugin.ApplicationPaths`; renamed to
-    `Plugin.SharedApplicationPaths`. `CS1591` (313 missing XML docs) is suppressed: Jellyfin's Swagger only reads XML
-    docs from its own install directory, never from plugin folders. `apps/config-ui` `tsc --noEmit` failed inside
+    `Plugin.SharedApplicationPaths`. `CS1591` (313 missing XML docs): the plugin no longer generates (or ships) an XML
+    doc file, because Jellyfin's Swagger only reads XML docs from its own install directory, never from plugin folders. `apps/config-ui` `tsc --noEmit` failed inside
     `@preact/signals-core` typings (`Disposable`); `skipLibCheck` is now set, as in `apps/web-client`.
 12. **CI never ran the frontend checks.** PR validation now runs `tsc --noEmit` for both frontends and the web-client
     tests.

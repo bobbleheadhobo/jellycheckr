@@ -30,7 +30,21 @@ public sealed class JellyfinSessionCommandDispatcher : IJellyfinSessionCommandDi
     public bool CanReceiveCommands(string sessionId)
     {
         var sessionManager = _serviceProvider.GetService<ISessionManager>();
-        return sessionManager is not null && HasCommandChannel(sessionManager, sessionId);
+        if (sessionManager is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return HasCommandChannel(sessionManager, sessionId);
+        }
+        catch (Exception ex)
+        {
+            // A session closing concurrently disposes its controllers, which then throw ObjectDisposedException.
+            _logger.LogJellycheckrDebug(ex, "[Jellycheckr] Failed to check remote control for session={SessionId}.", sessionId);
+            return false;
+        }
     }
 
     public Task<bool> TrySendPauseAsync(string sessionId, string? controllingUserId, CancellationToken cancellationToken)
