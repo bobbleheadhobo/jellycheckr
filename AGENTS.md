@@ -10,6 +10,7 @@ Key rules that are easy to get wrong:
 - Target Jellyfin `12.x` on `net10.0`; keep `JellyfinPackageVersion` at the lowest 12.x the code needs (it sets `targetAbi`).
 - Never send `X-Emby-Token` / `X-Emby-Authorization` / `api_key`; Jellyfin 12 rejects them. Use `Authorization: MediaBrowser Token="..."`.
 - Compare Jellyfin user ids as `D`-format GUID strings.
+- Never put `Claude-Session:` trailers or other claude.ai session links in commit messages or PR descriptions. Keep the `Co-Authored-By:` trailer.
 
 # .NET Development Rules
 
